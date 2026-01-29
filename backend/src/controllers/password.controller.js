@@ -40,7 +40,7 @@ async function resetPassword(req, res) {
     }
 
     if (newPassword.length < 3) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+      return res.status(400).json({ message: "Password must be at least 3 characters" });
     }
 
     let payload;
