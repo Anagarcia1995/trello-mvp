@@ -9,20 +9,30 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
   const { reloadMe } = useAuth();
 
   async function onSubmit(e) {
     e.preventDefault();
+
+    if (!email.trim() || !password) {
+      alert("Email y contraseña son obligatorios");
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await apiFetch("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
+
       localStorage.setItem("token", data.token);
       await reloadMe();
       navigate("/boards");
+    } catch (err) {
+      alert(err.message || "Error en login");
     } finally {
       setLoading(false);
     }
@@ -31,21 +41,21 @@ export default function LoginPage() {
   return (
     <Container maxW="md" py={10}>
       <AuthFormComponent
-        title="Login"
+        title="ACCEDER"
         submitLabel="Entrar"
         loading={loading}
         onSubmit={onSubmit}
         fields={[
           {
             name: "email",
-            label: "Email",
+            label: "Dirección de email",
             type: "email",
             value: email,
             onChange: (e) => setEmail(e.target.value),
           },
           {
             name: "password",
-            label: "Password",
+            label: "Contraseña",
             type: "password",
             value: password,
             onChange: (e) => setPassword(e.target.value),
@@ -54,10 +64,10 @@ export default function LoginPage() {
         footer={
           <>
             <Link as={RouterLink} to="/forgot-password">
-              ¿Olvidaste tu contraseña?
+              ¿Has olvidado tu contraseña?
             </Link>
             <Link as={RouterLink} to="/register">
-              No tengo cuenta → Registro
+              Crear cuenta
             </Link>
           </>
         }

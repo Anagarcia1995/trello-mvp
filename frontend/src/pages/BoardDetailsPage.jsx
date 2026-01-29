@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link as RouterLink } from "react-router-dom";
-import { Box, Button, Container, Heading, Input, Stack, Text, Textarea } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Container,
+  Heading,
+  Input,
+  Stack,
+  Text,
+  Textarea,
+} from "@chakra-ui/react";
 import { DndContext } from "@dnd-kit/core";
 import { apiFetch } from "../api/fetchClient";
 import TaskCard from "../components/TaskCardComponent";
@@ -10,41 +19,58 @@ export default function BoardDetailsPage() {
   const { id } = useParams();
 
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+  const [loadingBoard, setLoadingBoard] = useState(true);
 
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [creating, setCreating] = useState(false);
-
-  const [shareEmailByBoard, setShareEmailByBoard] = useState({});
-  const [sharingBoardId, setSharingBoardId] = useState(null);
+  const [board, setBoard] = useState(null);
 
   async function loadTasks() {
-    setLoading(true);
+    setLoadingTasks(true);
     try {
       const data = await apiFetch(`/boards/${id}/tasks`);
       setTasks(data);
     } catch (err) {
-      console.error(err.message);
+      console.error("Error loading tasks:", err.message);
       alert(err.message || "Error cargando tareas");
     } finally {
-      setLoading(false);
+      setLoadingTasks(false);
+    }
+  }
+
+  async function loadBoard() {
+    setLoadingBoard(true);
+    try {
+      const data = await apiFetch(`/boards/${id}`);
+      setBoard(data);
+    } catch (err) {
+      console.error("Error loading board:", err.message);
+      alert("No se pudo cargar el tablero");
+    } finally {
+      setLoadingBoard(false);
     }
   }
 
   useEffect(() => {
+    loadBoard();
     loadTasks();
   }, [id]);
 
   async function createTask() {
-    if (!newTitle.trim()) return;
+    const title = newTitle.trim();
+    if (!title) {
+      alert("Escribe un título para la tarea");
+      return;
+    }
 
     setCreating(true);
     try {
       await apiFetch(`/boards/${id}/tasks`, {
         method: "POST",
         body: JSON.stringify({
-          title: newTitle.trim(),
+          title,
           description: newDescription.trim() || null,
         }),
       });
@@ -53,25 +79,36 @@ export default function BoardDetailsPage() {
       setNewDescription("");
       await loadTasks();
     } catch (err) {
-      console.error(err.message);
+      console.error("Error creating task:", err.message);
       alert(err.message || "Error creando tarea");
     } finally {
       setCreating(false);
     }
   }
 
-  const grouped = useMemo(() => {
-    return {
+  const grouped = useMemo(
+    () => ({
       todo: tasks.filter((t) => t.status === "todo"),
       doing: tasks.filter((t) => t.status === "doing"),
       done: tasks.filter((t) => t.status === "done"),
-    };
+    }),
+    [tasks]
+  );
+
+  // Numeración por board (estable por orden de creación)
+  const taskNumberById = useMemo(() => {
+    const map = new Map();
+    [...tasks]
+      .sort((a, b) => a.id - b.id)
+      .forEach((t, idx) => map.set(t.id, idx + 1));
+    return map;
   }, [tasks]);
 
   async function updateTaskStatus(taskId, newStatus) {
+    // Optimistic update
     setTasks((prev) =>
       prev.map((t) =>
-        String(t.id) === String(taskId) ? { ...t, status: newStatus } : t
+        t.id === taskId ? { ...t, status: newStatus } : t
       )
     );
 
@@ -82,7 +119,7 @@ export default function BoardDetailsPage() {
       });
     } catch (err) {
       alert(err.message || "Error actualizando estado. Reintentando...");
-      await loadTasks(); 
+      await loadTasks();
     }
   }
 
@@ -93,21 +130,38 @@ export default function BoardDetailsPage() {
     const task = active.data.current?.task;
     const newStatus = over.id;
 
-    if (!task) return;
-    if (task.status === newStatus) return;
+    if (!task || task.status === newStatus) return;
 
     updateTaskStatus(task.id, newStatus);
   }
 
-
   return (
     <Container maxW="6xl" py={8}>
       <Stack spacing={6}>
-        <Stack direction="row" justify="space-between" align="center">
-          <Heading size="lg">Tablón #{id}</Heading>
-          <Button as={RouterLink} to="/boards" variant="outline">
-            Volver a tablones
-          </Button>
+        <Stack spacing={2}>
+          <Stack direction="row" justify="space-between" align="center">
+            <Heading size="lg">
+              {loadingBoard ? "Cargando..." : board?.title}
+            </Heading>
+
+            <Button as={RouterLink} to="/boards" variant="outline">
+              Volver a tablones
+            </Button>
+          </Stack>
+
+          {board?.members?.length ? (
+            <Stack direction="row" wrap="wrap" spacing={2}>
+              {board.members.map((m) => (
+                <Text key={m.id} fontSize="sm">
+                  • {m.name || m.email}
+                </Text>
+              ))}
+            </Stack>
+          ) : (
+            <Text fontSize="sm" color="gray.600">
+              Nadie (solo tú)
+            </Text>
+          )}
         </Stack>
 
         <Box borderWidth="1px" borderRadius="md" p={4}>
@@ -126,45 +180,32 @@ export default function BoardDetailsPage() {
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
             />
-            <Button
-              onClick={createTask}
-              isLoading={creating}
-              alignSelf="flex-start"
-            >
+            <Button onClick={createTask} isLoading={creating} alignSelf="flex-start">
               Crear
             </Button>
           </Stack>
         </Box>
 
-        {loading ? (
+        {loadingTasks ? (
           <Text>Cargando tareas…</Text>
         ) : (
           <DndContext onDragEnd={onDragEnd}>
             <Box display="grid" gridTemplateColumns="repeat(3, 1fr)" gap={3}>
-              <BoardColumn
-                status="todo"
-                title={`TODO (${grouped.todo.length})`}
-              >
+              <BoardColumn status="todo" title={`TO DO (${grouped.todo.length})`}>
                 {grouped.todo.map((t) => (
-                  <TaskCard key={t.id} task={t} />
+                  <TaskCard key={t.id} task={t} number={taskNumberById.get(t.id)} />
                 ))}
               </BoardColumn>
 
-              <BoardColumn
-                status="doing"
-                title={`DOING (${grouped.doing.length})`}
-              >
+              <BoardColumn status="doing" title={`DOING (${grouped.doing.length})`}>
                 {grouped.doing.map((t) => (
-                  <TaskCard key={t.id} task={t} />
+                  <TaskCard key={t.id} task={t} number={taskNumberById.get(t.id)} />
                 ))}
               </BoardColumn>
 
-              <BoardColumn
-                status="done"
-                title={`DONE (${grouped.done.length})`}
-              >
+              <BoardColumn status="done" title={`DONE (${grouped.done.length})`}>
                 {grouped.done.map((t) => (
-                  <TaskCard key={t.id} task={t} />
+                  <TaskCard key={t.id} task={t} number={taskNumberById.get(t.id)} />
                 ))}
               </BoardColumn>
             </Box>

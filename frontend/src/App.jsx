@@ -9,6 +9,11 @@ import BoardDetailsPage from "./pages/BoardDetailsPage";
 import ForgotPasswordPage from "./pages/ForgotPassword";
 import ResetPasswordPage from "./pages/ResetPassword";
 
+/**
+ * Definición de rutas de la aplicación.
+ * Las rutas /boards están protegidas por autenticación.
+ */
+
 export default function App() {
   return (
     <AuthProvider>

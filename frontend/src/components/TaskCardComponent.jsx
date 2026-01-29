@@ -1,11 +1,10 @@
-import React from "react";
 import { Box, Text } from "@chakra-ui/react";
 import { useDraggable } from "@dnd-kit/core";
 
-export default function TaskCard({ task }) {
+export default function TaskCard({ task, number }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
-      id: String(task.id),
+      id: String(task.id), // ⚠️ debe ser único y estable
       data: { task },
     });
 
@@ -36,7 +35,7 @@ export default function TaskCard({ task }) {
       ) : null}
 
       <Text fontSize="xs" color="gray.500" mt={2}>
-        #{task.id}
+        #{number ?? task.id}
       </Text>
     </Box>
   );

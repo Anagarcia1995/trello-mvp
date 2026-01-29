@@ -1,5 +1,11 @@
 import { Box, Button, Input, Stack, Text, Heading } from "@chakra-ui/react";
 
+/**
+ *  * Formulario genérico para auth (login / register / reset).
+ *  * Recibe campos dinámicos y maneja submit/loading.
+ * 
+ */
+
 export default function AuthFormComponent({
   title,
   fields,

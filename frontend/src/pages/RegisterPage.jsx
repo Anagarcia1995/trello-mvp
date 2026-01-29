@@ -15,14 +15,21 @@ export default function RegisterPage() {
 
   async function onSubmit(e) {
     e.preventDefault();
+
+    if (!name.trim() || !email.trim() || !password) {
+      alert("Nombre, email y contraseña son obligatorios");
+      return;
+    }
+
     setSubmitting(true);
-
-    console.log("Intentando login con:", { email });
-
     try {
       const data = await apiFetch("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+        }),
       });
 
       localStorage.setItem("token", data.token);
@@ -55,7 +62,11 @@ export default function RegisterPage() {
 
             <Stack spacing={1}>
               <Text>Password</Text>
-              <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" />
+              <Input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+              />
             </Stack>
 
             <Button type="submit" isLoading={submitting}>

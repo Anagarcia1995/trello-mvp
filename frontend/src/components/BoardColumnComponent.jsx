@@ -7,6 +7,11 @@ export default function BoardColumn({ status, title, children }) {
     id: status, // "todo" | "doing" | "done"
   });
 
+/**
+ * Columna del tablero (TODO / DOING / DONE).
+ * Usa dnd-kit para permitir soltar tareas según su estado.
+ */
+
   return (
     <Box
       ref={setNodeRef}

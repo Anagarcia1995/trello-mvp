@@ -1,10 +1,10 @@
 require("dotenv").config();
 const { Sequelize } = require("sequelize");
 
-// Conexión a la base de datos usando Sequelize
-// Las credenciales se leen desde variables de entorno (.env) para
-// tener flexibilidad con diferentes entornos
-
+/**
+ * Conexión a la base de datos con Sequelize.
+ * Credenciales por variables de entorno para soportar distintos entornos.
+ */
 const sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,

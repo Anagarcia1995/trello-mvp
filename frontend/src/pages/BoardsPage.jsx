@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Button,
-  Container,
-  Heading,
-  Input,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
+import { Button, Container, Heading, Input, Stack, Text } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/fetchClient";
 import { useAuth } from "../auth/AuthContext";
@@ -40,15 +33,21 @@ export default function BoardsPage() {
 
   useEffect(() => {
     loadBoards();
-  }, []);
+    // recarga cuando cambia el usuario (ej: login/logout)
+  }, [user?.id]);
 
   async function createBoard() {
-    if (!title.trim()) return;
+    const t = title.trim();
+    if (!t) {
+      alert("Escribe un título para el tablero");
+      return;
+    }
+
     setCreating(true);
     try {
       await apiFetch("/boards", {
         method: "POST",
-        body: JSON.stringify({ title: title.trim() }),
+        body: JSON.stringify({ title: t }),
       });
       setTitle("");
       await loadBoards();
@@ -62,7 +61,10 @@ export default function BoardsPage() {
 
   async function shareBoard(boardId) {
     const email = (shareEmailByBoard[boardId] || "").trim();
-    if (!email) return;
+    if (!email) {
+      alert("Introduce un email para compartir");
+      return;
+    }
 
     setSharingBoardId(boardId);
     try {
@@ -82,14 +84,17 @@ export default function BoardsPage() {
   }
 
   return (
-    <Container maxW="xl" py={10}>
+    <Container maxW="xl" py={20}>
       <Stack spacing={6}>
-        <Stack spacing={1}>
-          <Heading>Tablones</Heading>
-          <Text>Logueada como: {user?.email}</Text>
-          <Button onClick={logout} variant="outline">
-            Cerrar sesión
-          </Button>
+        <Stack spacing={2}>
+          <Stack direction="row" justify="space-between" align="center">
+            <Heading>Tablones</Heading>
+            <Button onClick={logout} variant="outline">
+              Cerrar sesión
+            </Button>
+          </Stack>
+
+          <Text>Logueada como: {user?.name || user?.email}</Text>
         </Stack>
 
         <Stack direction="row" spacing={2}>
@@ -98,7 +103,7 @@ export default function BoardsPage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
-          <Button onClick={createBoard} isLoading={creating}>
+          <Button onClick={createBoard} isLoading={creating} width="85px">
             Crear
           </Button>
         </Stack>
@@ -109,37 +114,44 @@ export default function BoardsPage() {
           <Text>No tienes tablones todavía.</Text>
         ) : (
           <Stack spacing={3}>
-            {boards.map((b) => (
-              <Stack key={b.id} direction="row" spacing={2} align="center">
-                <Button
-                  variant="outline"
-                  justifyContent="flex-start"
-                  onClick={() => navigate(`/boards/${b.id}`)}
-                  flex="1"
-                >
-                  {b.title}
-                </Button>
+            {boards.map((b) => {
+              const shareEmail = shareEmailByBoard[b.id] || "";
+              const canShare = shareEmail.trim().length > 0;
 
-                <Input
-                  placeholder="email para compartir"
-                  value={shareEmailByBoard[b.id] || ""}
-                  onChange={(e) =>
-                    setShareEmailByBoard((prev) => ({
-                      ...prev,
-                      [b.id]: e.target.value,
-                    }))
-                  }
-                  width="150px"
-                />
+              return (
+                <Stack key={b.id} direction="row" spacing={2} align="center">
+                  <Button
+                    variant="outline"
+                    justifyContent="flex-start"
+                    onClick={() => navigate(`/boards/${b.id}`)}
+                    flex="1"
+                  >
+                    {b.title}
+                  </Button>
 
-                <Button
-                  onClick={() => shareBoard(b.id)}
-                  isLoading={sharingBoardId === b.id}
-                >
-                  Compartir
-                </Button>
-              </Stack>
-            ))}
+                  <Input
+                    placeholder="email para compartir"
+                    value={shareEmail}
+                    onChange={(e) =>
+                      setShareEmailByBoard((prev) => ({
+                        ...prev,
+                        [b.id]: e.target.value,
+                      }))
+                    }
+                    width="160px"
+                  />
+
+                  <Button
+                    onClick={() => shareBoard(b.id)}
+                    isLoading={sharingBoardId === b.id}
+                    isDisabled={!canShare || sharingBoardId !== null}
+                    width="85px"
+                  >
+                    Compartir
+                  </Button>
+                </Stack>
+              );
+            })}
           </Stack>
         )}
       </Stack>

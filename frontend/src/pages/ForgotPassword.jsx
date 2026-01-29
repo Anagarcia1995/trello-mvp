@@ -6,19 +6,33 @@ import AuthFormComponent from "../components/AuthFormComponent";
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e) {
     e.preventDefault();
+
+    if (!email.trim()) {
+      alert("Introduce un email");
+      return;
+    }
+
     setLoading(true);
     try {
-      await apiFetch("/auth/forgot-password", {
+      const data = await apiFetch("/auth/forgot-password", {
         method: "POST",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim() }),
       });
-      navigate("/reset-password");
+
+      // En MVP devolvemos token si el usuario existe. Si no existe, token es null.
+      if (data?.token) {
+        navigate(`/reset-password?token=${encodeURIComponent(data.token)}`);
+      }
+
       alert("Si el email existe, te hemos enviado instrucciones.");
+    } catch (err) {
+      alert(err.message || "Error solicitando reset");
     } finally {
       setLoading(false);
     }

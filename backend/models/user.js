@@ -1,20 +1,16 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
+
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
+      // Boards creados por este usuario (propietario técnico del board)
       User.hasMany(models.Board, {
         foreignKey: "ownerId",
         as: "ownedBoards",
       });
 
+      // Boards donde este usuario es miembro (compartidos por email)
       User.belongsToMany(models.Board, {
         through: models.BoardUser,
         foreignKey: "userId",
@@ -23,13 +19,30 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
-  User.init({
-    name: DataTypes.STRING,
-    email: DataTypes.STRING,
-    passwordHash: DataTypes.STRING
-  }, {
-    sequelize,
-    modelName: 'User',
-  });
+
+  User.init(
+    {
+      name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        // La constraint real está en migración (unique: true).
+        // Esto es validación a nivel modelo para fallar antes.
+        validate: { isEmail: true },
+      },
+      passwordHash: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+    },
+    {
+      sequelize,
+      modelName: "User",
+    }
+  );
+
   return User;
 };

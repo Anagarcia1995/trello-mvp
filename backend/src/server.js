@@ -1,10 +1,15 @@
 require("dotenv").config();
+
 const app = require("./app");
 const { sequelize } = require("./db");
 
 const PORT = process.env.PORT || 3000;
-// Punto de arranque de la app
 
+/**
+ * Punto de arranque del servidor.
+ * - Conecta a la DB
+ * - Levanta Express
+ */
 async function start() {
   try {
     await sequelize.authenticate();

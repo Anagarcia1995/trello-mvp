@@ -2,7 +2,30 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { User } = require("../../models");
 
-// Genera un token de recuperación, en un sistema real se envia por email
+/**
+ * Token de recuperación (MVP).
+ * En producción: se enviaría por email dentro de un link.
+ */
+function signResetToken(user) {
+  return jwt.sign(
+    { userId: user.id, email: user.email },
+    process.env.RESET_PASSWORD_SECRET,
+    { expiresIn: process.env.RESET_PASSWORD_EXPIRES_IN || "15m" }
+  );
+}
+
+/**
+ * Token de sesión (login/register/reset).
+ */
+function signSessionToken(user) {
+  return jwt.sign(
+    { userId: user.id, email: user.email },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+  );
+}
+
+// Genera un token de recuperación, en un sistema real se envía por email
 async function forgotPassword(req, res) {
   try {
     const { email } = req.body;
@@ -10,23 +33,28 @@ async function forgotPassword(req, res) {
 
     const user = await User.findOne({ where: { email } });
 
-    // No relevamos si el email existe por seguridad
+    /**
+     * Respuesta uniforme por seguridad:
+     * no revelamos si el email existe o no.
+     * Importante para frontend: devolvemos siempre `token` (null si no existe).
+     */
     if (!user) {
-      return res.json({ message: "If the email exists, a reset link will be sent." });
+      return res.json({
+        message: "If the email exists, a reset link will be sent.",
+        token: null,
+      });
     }
 
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.RESET_PASSWORD_SECRET,
-      { expiresIn: process.env.RESET_PASSWORD_EXPIRES_IN || "15m" }
-    );
+    const token = signResetToken(user);
 
     return res.json({
       message: "Password reset token generated (MVP).",
       token,
     });
   } catch (err) {
-    return res.status(500).json({ message: "Error generating reset token", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Error generating reset token", error: err.message });
   }
 }
 
@@ -40,7 +68,9 @@ async function resetPassword(req, res) {
     }
 
     if (newPassword.length < 3) {
-      return res.status(400).json({ message: "Password must be at least 3 characters" });
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 3 characters" });
     }
 
     let payload;
@@ -56,9 +86,18 @@ async function resetPassword(req, res) {
     user.passwordHash = await bcrypt.hash(newPassword, 10);
     await user.save();
 
-    return res.json({ message: "Password updated successfully" });
+    // ✅ Auto-login tras cambiar contraseña
+    const sessionToken = signSessionToken(user);
+
+    return res.json({
+      message: "Password updated successfully",
+      token: sessionToken,
+      user: { id: user.id, name: user.name, email: user.email },
+    });
   } catch (err) {
-    return res.status(500).json({ message: "Error resetting password", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Error resetting password", error: err.message });
   }
 }
 
