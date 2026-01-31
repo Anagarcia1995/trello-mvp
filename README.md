@@ -156,4 +156,4 @@ npm install
 cp .env.example .env
 npm run dev
 
-
+“PR creado para code review del proyecto de prácticas”
